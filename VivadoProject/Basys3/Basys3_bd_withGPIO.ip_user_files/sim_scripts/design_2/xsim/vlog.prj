@@ -1,0 +1,18 @@
+verilog xil_defaultlib --include "../../../../Basys3_bd_withGPIO.gen/sources_1/bd/design_2/ipshared/c2c6" --include "../../../../Basys3_bd_withGPIO.gen/sources_1/bd/design_2/ipshared/ec67/hdl" \
+"../../../bd/design_2/ip/design_2_clk_wiz_0_0/design_2_clk_wiz_0_0_clk_wiz.v" \
+"../../../bd/design_2/ip/design_2_clk_wiz_0_0/design_2_clk_wiz_0_0.v" \
+"../../../bd/design_2/ip/design_2_lmb_bram_0/sim/design_2_lmb_bram_0.v" \
+"../../../bd/design_2/ip/design_2_xbar_0/sim/design_2_xbar_0.v" \
+"../../../bd/design_2/ip/design_2_microblaze_0_xlconcat_0/sim/design_2_microblaze_0_xlconcat_0.v" \
+"../../../bd/design_2/ip/design_2_axi_ps2_0_0/src/sim/fifo_generator_0.v" \
+"../../../bd/design_2/sim/design_2.v" \
+"../../../bd/design_2/ipshared/b7b6/src/PixelLogic.v" \
+"../../../bd/design_2/ipshared/b7b6/src/SyncGen.v" \
+"../../../bd/design_2/ipshared/b7b6/src/VGA_Controller_v1_0_S_AXI.v" \
+"../../../bd/design_2/ipshared/b7b6/src/VGA_Controller_v1_0.v" \
+"../../../bd/design_2/ip/design_2_VGA_Controller_v1_0_0_2/sim/design_2_VGA_Controller_v1_0_0_2.v" \
+
+verilog xil_defaultlib "glbl.v"
+
+# Do not sort compile order
+nosort
