@@ -1,0 +1,49 @@
+HDMI OUTPUT DEBUGGING CHECKLIST (Pynq-Z1, VDMA + HDMI Out)
+
+1. Incorrect Pixel Clock Frequency
+   - Problem: HDMI requires a precise clock (e.g. 74.25 MHz for 720p).
+   - Fix: Use a Clocking Wizard to generate the exact required frequency.
+
+2. Video Timing Mismatch
+   - Problem: VTC not matching 720p spec.
+   - Fix: Use proper VTC settings for 1280x720@60Hz.
+
+3. VDMA Misconfiguration
+   - Problem: Incorrect DMA settings (wrong stride, H size, etc.).
+   - Fix:
+     - Enable Circular Buffer
+     - Set correct HoriSize = WIDTH * BYTES_PER_PIXEL
+     - Set Stride = WIDTH * BYTES_PER_PIXEL
+
+4. Unflushed Cache or Uninitialized Buffers
+   - Problem: CPU cache holds dirty frame buffer data.
+   - Fix: Call Xil_DCacheFlushRange() after writing to each frame.
+
+5. Incorrect Data Format
+   - Problem: Pixel order incorrect (e.g. BGR vs RGB).
+   - Fix: Pack pixels correctly (usually B, G, R).
+
+6. HDMI PHY Not Enabled
+   - Problem: TMDS or clock signals not active.
+   - Fix: Ensure RGB2DVI IP is correctly configured and connected.
+
+7. Incorrect Frame Buffer Address
+   - Problem: Memory location invalid or unmapped.
+   - Fix: Use address like 0x10000000, ensure mapped to DDR in block design.
+
+8. Monitor Compatibility Issues
+   - Problem: Some monitors don’t like certain HDMI modes.
+   - Fix: Test with known-good monitor or resolution (e.g., 800x600@60Hz).
+
+9. Missing Reset or Enable Signals
+   - Problem: Some IP blocks may be stuck in reset or idle.
+   - Fix: Use GPIO or constant blocks to drive enable/reset inputs as needed.
+
+10. Clock Domain Mismatches
+    - Problem: HDMI output and VDMA on different unsynchronized clocks.
+    - Fix: Sync video timing, AXIS to Video Out, and VTC with same video clock.
+
+Notes:
+- Always check your HDMI cable and connector.
+- Monitor should show signal detection even with a blank (black) frame.
+- If HDMI isn’t detected at all, start debugging from RGB2DVI backward.
