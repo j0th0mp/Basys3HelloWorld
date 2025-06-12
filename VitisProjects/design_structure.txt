@@ -1,0 +1,153 @@
+PYNQ-Z1 HDMI OUTPUT BLOCK DESIGN FLOW (Complete with Comments)
+===============================================================
+
+Target: Pynq-Z1 FPGA (Zynq-7000 XC7Z020-1CLG400C)
+Goal: Output video via HDMI using AXI VDMA and RGB to DVI on standalone OS
+Resolution: 720p @ 60Hz (1280x720 @ 60fps)
+
+---------------------------------------------------------------
+[1] ADD THE ZYNQ7 PROCESSING SYSTEM (PS)
+---------------------------------------------------------------
+- Purpose: Drives the whole system, configures clocks, boots software.
+- From IP Catalog: Add "ZYNQ7 Processing System"
+- Run "Block Automation":
+    • Enable DDR
+    • Enable MIO for UART, SD, etc.
+    • Enable HP0 port (for VDMA -> DDR access)
+
+---------------------------------------------------------------
+[2] ADD KEY IP BLOCKS
+---------------------------------------------------------------
+A. AXI VDMA
+   - Function: Reads video data from DDR and streams it out as AXI4-Stream.
+   - Configure as:
+     • Only Memory-Mapped to Stream (MM2S) enabled
+     • Enable Circular Buffer
+     • Enable Frame Counter (3 Buffers recommended)
+     • Video Format: RGB888 (3 bytes per pixel)
+     • Genlock: Use internal
+
+B. Video Timing Controller (VTC)
+   - Function: Generates video sync signals (HSync, VSync, DE) for HDMI.
+   - Configure for:
+     • 1280x720 resolution @ 60Hz
+     • Enable Timing Generator
+     • Do NOT enable detector
+
+C. AXI4-Stream to Video Out
+   - Function: Converts VDMA AXI stream to Video signals
+   - Set:
+     • Pixels per clock = 1
+     • Color format = RGB
+   - Connect:
+     • AXIS video input ← VDMA stream out
+     • Timing input ← VTC timing out
+
+D. RGB to DVI
+   - Function: Converts RGB + sync signals to HDMI (TMDS format)
+   - Configure:
+     • Resolution: 720p @ 60Hz (or auto if supported)
+     • Output format: TMDS
+     • Pixel Clock: from Clocking Wizard
+
+E. Clocking Wizard
+   - Function: Generates correct HDMI clock
+   - Set:
+     • Input Clock: 100 MHz (from PS)
+     • Output Clock: 74.25 MHz (for 720p)
+   - Use output for:
+     • AXI VDMA MM2S video clock
+     • VTC
+     • AXI4-Stream to Video Out
+     • RGB to DVI
+
+F. Processor System Reset
+   - Function: Generates proper reset signals for all IPs
+   - Input: HDMI clock from Clocking Wizard
+   - Output: Reset to VDMA, VTC, Video Out, RGB2DVI
+
+G. AXI Interconnect (or SmartConnect)
+   - Function: Routes AXI transactions from PS to VDMA
+   - Use as glue logic between PS M_AXI_GP0 and VDMA
+
+---------------------------------------------------------------
+[3] CONNECT THE BLOCKS
+---------------------------------------------------------------
+
+- PS (M_AXI_GP0) → AXI Interconnect → AXI VDMA S_AXI_Lite
+- PS (HP0)       → AXI VDMA memory interface
+- Clocking Wizard output clk_out1 (74.25 MHz) → 
+    • VDMA MM2S video clock
+    • VTC clk
+    • AXI-Stream to Video Out aclk
+    • RGB to DVI PixelClk
+- Clocking Wizard clk_out1 → Processor System Reset input clk
+- Reset outputs from System Reset block → All video domain IPs
+
+AXI VDMA:
+    - MM2S Video Out → AXIS Video In (AXI4S to Video Out)
+
+AXI4-Stream to Video Out:
+    - Video Out TDATA/TVALID → RGB2DVI RGB inputs
+    - Video Timing → from VTC
+
+RGB2DVI:
+    - TMDS outputs → External HDMI pins
+
+---------------------------------------------------------------
+[4] DEFINE HDMI OUTPUT PINS IN XDC FILE
+---------------------------------------------------------------
+## HDMI Output Pins (Pynq-Z1 HDMI connector)
+## These are directly driven from RGB2DVI TMDS outputs
+
+set_property PACKAGE_PIN G6  [get_ports hdmi_tx_clk_p]
+set_property PACKAGE_PIN G5  [get_ports hdmi_tx_clk_n]
+set_property PACKAGE_PIN D4  [get_ports hdmi_tx_p[0]]
+set_property PACKAGE_PIN D3  [get_ports hdmi_tx_n[0]]
+set_property PACKAGE_PIN C6  [get_ports hdmi_tx_p[1]]
+set_property PACKAGE_PIN C5  [get_ports hdmi_tx_n[1]]
+set_property PACKAGE_PIN A6  [get_ports hdmi_tx_p[2]]
+set_property PACKAGE_PIN A5  [get_ports hdmi_tx_n[2]]
+
+set_property IOSTANDARD TMDS_33 [get_ports hdmi_tx_*]
+
+---------------------------------------------------------------
+[5] BUILD AND EXPORT
+---------------------------------------------------------------
+- Validate block design
+- Generate HDL wrapper
+- Generate Bitstream
+- Export Hardware with bitstream (File → Export → Include Bitstream)
+
+---------------------------------------------------------------
+[6] SOFTWARE FLOW (TEST IN VITIS)
+---------------------------------------------------------------
+- Create new standalone application (e.g. "hdmi_color_test")
+- Use base address of VDMA registers from address editor
+- Allocate DDR frame buffer at e.g. 0x10000000
+- Fill frame buffer with a single color (e.g. 0x00FF0000 for red)
+- Flush DCache: Xil_DCacheFlushRange()
+- Configure and start VDMA to read from frame buffer
+- Framebuffer settings:
+    • HSize = 1280 × 3 = 3840
+    • VSize = 720
+    • Stride = 3840
+
+---------------------------------------------------------------
+[7] OUTPUT VERIFICATION
+---------------------------------------------------------------
+- Plug HDMI cable into monitor
+- Set monitor to 720p input mode
+- If correctly set up:
+    • HDMI detected
+    • Screen should display filled color
+    • No flickering or artifacts
+
+---------------------------------------------------------------
+[8] TROUBLESHOOTING TIPS
+---------------------------------------------------------------
+- Check pixel clock is exactly 74.25 MHz
+- Ensure all video IPs are clocked and reset correctly
+- Validate DDR memory map matches VDMA configuration
+- Double-check TMDS output pin assignments
+- Use `XSdPs` to load image data if using Petalinux later
